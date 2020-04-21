@@ -1,5 +1,5 @@
 # CSGO_aimbot
-<h1>Simple aimbot</h1><br/>
+<h3>Simple aimbot</h3><br/>
 
 Date of offsets: 2020-04-17 06:27:39.126158300 UTC<br/><br/>
 
