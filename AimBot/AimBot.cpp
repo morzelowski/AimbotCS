@@ -8,6 +8,7 @@
 #include <tlhelp32.h>
 #include <vector>
 #include <string.h>
+#include <thread>
 #include "haze.h"
 #include "Point.h"
 #include "Player.h"
@@ -88,10 +89,18 @@ vector<float> Aim(Player entity[64], Player myplayer, int closest)
     }
 }
 
-HANDLE proces;
+void Attack()
+{
+    keybd_event(VK_F1, MapVirtualKey(VK_F1, 0), 0, 0);
+    this_thread::sleep_for(25ms);
+    keybd_event(VK_F1, MapVirtualKey(VK_F1, 0), 2, 0);
+    this_thread::sleep_for(25ms);
+}
 
 int main()
 {
+    HANDLE process;
+
     SYSTEMTIME st;
     int moment = NULL;
 
@@ -107,9 +116,12 @@ int main()
     if (window != NULL)
     {
         GetWindowThreadProcessId(window, &pid);
-        proces = OpenProcess(PROCESS_VM_READ, false, pid);
-        if (proces != NULL)
+        process = OpenProcess(PROCESS_VM_READ, false, pid);
+        if (process != NULL)
         {
+            DWORD clientmodule = GetModuleBaseAddress((LPSTR)"client_panorama.dll", pid);
+            DWORD engine = GetModuleBaseAddress((LPSTR)"engine.dll", pid);
+
             while (true)
             {
                 if (GetAsyncKeyState(VK_UP))
@@ -126,18 +138,16 @@ int main()
 
                 if (ifplay == true)
                 {
-                    DWORD clientmodule = GetModuleBaseAddress((LPSTR)"client_panorama.dll", pid);
-                    DWORD engine = GetModuleBaseAddress((LPSTR)"engine.dll", pid);
                     DWORD dwclient;
 
                     DWORD player;
-                    ReadProcessMemory(proces, (LPCVOID)(clientmodule + signatures::dwLocalPlayer), (PVOID)&player, sizeof(player), 0);
+                    ReadProcessMemory(process, (LPCVOID)(clientmodule + signatures::dwLocalPlayer), (PVOID)&player, sizeof(player), 0);
 
                     Player myplayer;
-                    ReadProcessMemory(proces, (LPCVOID)(engine + signatures::dwClientState), (PVOID)&dwclient, sizeof(dwclient), 0);
+                    ReadProcessMemory(process, (LPCVOID)(engine + signatures::dwClientState), (PVOID)&dwclient, sizeof(dwclient), 0);
 
                     DWORD basebone;
-                    ReadProcessMemory(proces, (LPCVOID)(player + netvars::m_dwBoneMatrix), (PVOID)&basebone, sizeof(basebone), 0);
+                    ReadProcessMemory(process, (LPCVOID)(player + netvars::m_dwBoneMatrix), (PVOID)&basebone, sizeof(basebone), 0);
 
                     while (true)
                     {
@@ -148,7 +158,7 @@ int main()
                             moment = st.wSecond;
                             for (int i = 1; i < 64; i++)
                             {
-                                entity[i].strzelono = false;
+                                entity[i].shooted = false;
                             }
                         }
 
@@ -169,16 +179,16 @@ int main()
 
                         float pos_add[3];
 
-                        ReadProcessMemory(proces, (LPCVOID)(player + netvars::m_iHealth), (LPVOID)&myplayer.hp, sizeof(myplayer.hp), 0);
-                        ReadProcessMemory(proces, (LPCVOID)(player + netvars::m_iTeamNum), (PVOID)&myplayer.team, sizeof(myplayer.team), 0);
-                        ReadProcessMemory(proces, (LPCVOID)(player + netvars::m_vecOrigin), (PVOID)&myplayer.pos, sizeof(myplayer.pos), 0);
-                        ReadProcessMemory(proces, (LPCVOID)(player + netvars::m_vecViewOffset), (PVOID)&pos_add, sizeof(pos_add), 0);
+                        ReadProcessMemory(process, (LPCVOID)(player + netvars::m_iHealth), (LPVOID)&myplayer.hp, sizeof(myplayer.hp), 0);
+                        ReadProcessMemory(process, (LPCVOID)(player + netvars::m_iTeamNum), (PVOID)&myplayer.team, sizeof(myplayer.team), 0);
+                        ReadProcessMemory(process, (LPCVOID)(player + netvars::m_vecOrigin), (PVOID)&myplayer.pos, sizeof(myplayer.pos), 0);
+                        ReadProcessMemory(process, (LPCVOID)(player + netvars::m_vecViewOffset), (PVOID)&pos_add, sizeof(pos_add), 0);
 
                         myplayer.pos.x += pos_add[0];
                         myplayer.pos.y += pos_add[1];
                         myplayer.pos.z += pos_add[2];
 
-                        ReadProcessMemory(proces, (LPCVOID)(dwclient + signatures::dwClientState_ViewAngles), (PVOID)&pos_add, sizeof(pos_add), 0);
+                        ReadProcessMemory(process, (LPCVOID)(dwclient + signatures::dwClientState_ViewAngles), (PVOID)&pos_add, sizeof(pos_add), 0);
 
                         myplayer.ang.x = pos_add[0];
                         myplayer.ang.y = pos_add[1];
@@ -189,21 +199,21 @@ int main()
                         for (int i = 1; i < 64; i++)
                         {
                             DWORD ent;
-                            ReadProcessMemory(proces, (LPCVOID)(clientmodule + signatures::dwEntityList + (0x10 * i)), (PVOID)&ent, sizeof(ent), 0);
+                            ReadProcessMemory(process, (LPCVOID)(clientmodule + signatures::dwEntityList + (0x10 * i)), (PVOID)&ent, sizeof(ent), 0);
                             if (ent != NULL)
                             {
                                 maxplayer++;
 
-                                ReadProcessMemory(proces, (LPCVOID)(ent + netvars::m_iTeamNum), (PVOID)&entity[i].team, sizeof(entity[i].team), 0);
-                                ReadProcessMemory(proces, (LPCVOID)(ent + netvars::m_iHealth), (PVOID)&entity[i].hp, sizeof(entity[i].hp), 0);
-                                ReadProcessMemory(proces, (LPCVOID)(ent + netvars::m_bSpotted), (PVOID)&entity[i].isSpotted, sizeof(entity[i].isSpotted), 0);
+                                ReadProcessMemory(process, (LPCVOID)(ent + netvars::m_iTeamNum), (PVOID)&entity[i].team, sizeof(entity[i].team), 0);
+                                ReadProcessMemory(process, (LPCVOID)(ent + netvars::m_iHealth), (PVOID)&entity[i].hp, sizeof(entity[i].hp), 0);
+                                ReadProcessMemory(process, (LPCVOID)(ent + netvars::m_bSpotted), (PVOID)&entity[i].isSpotted, sizeof(entity[i].isSpotted), 0);
 
-                                ReadProcessMemory(proces, (LPCVOID)(ent + netvars::m_vecOrigin), (PVOID)&entity[i].pos, sizeof(entity[i].pos), 0);
+                                ReadProcessMemory(process, (LPCVOID)(ent + netvars::m_vecOrigin), (PVOID)&entity[i].pos, sizeof(entity[i].pos), 0);
                                 DWORD basebone;
-                                ReadProcessMemory(proces, (LPCVOID)(ent + netvars::m_dwBoneMatrix), (PVOID)&basebone, sizeof(basebone), 0);
-                                ReadProcessMemory(proces, (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x0C), (PVOID)&entity[i].pos.x, sizeof(entity[i].pos.x), 0);
-                                ReadProcessMemory(proces, (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x1C), (PVOID)&entity[i].pos.y, sizeof(entity[i].pos.y), 0);
-                                ReadProcessMemory(proces, (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x2C), (PVOID)&entity[i].pos.z, sizeof(entity[i].pos.z), 0);
+                                ReadProcessMemory(process, (LPCVOID)(ent + netvars::m_dwBoneMatrix), (PVOID)&basebone, sizeof(basebone), 0);
+                                ReadProcessMemory(process, (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x0C), (PVOID)&entity[i].pos.x, sizeof(entity[i].pos.x), 0);
+                                ReadProcessMemory(process, (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x1C), (PVOID)&entity[i].pos.y, sizeof(entity[i].pos.y), 0);
+                                ReadProcessMemory(process, (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x2C), (PVOID)&entity[i].pos.z, sizeof(entity[i].pos.z), 0);
                             }
                         }
 
@@ -219,7 +229,7 @@ int main()
                             angles[2] = 0;
                             float changex = (myplayer.ang.x - angles[0]);
                             float changey = (myplayer.ang.y - angles[1]);
-                            if ((abs(changex) + abs(changey)) / 2 < minchange && entity[i].team != myplayer.team && entity[i].hp > 0 && entity[i].isSpotted == true && entity[i].strzelono == false)
+                            if ((abs(changex) + abs(changey)) / 2 < minchange && entity[i].team != myplayer.team && entity[i].hp > 0 && entity[i].isSpotted == true && entity[i].shooted == false)
                             {
                                 minchange = (abs(changex) + abs(changey)) / 2;
                                 closestentity = i;
@@ -239,7 +249,7 @@ int main()
 
                             if (GetAsyncKeyState(VK_LBUTTON))
                             {
-                                if (abs(changex) < 3 * (3 - tryb) && abs(changey) < 3 * (3 - tryb) && entity[closestentity].team != myplayer.team && entity[closestentity].hp > 0 && entity[closestentity].isSpotted == true && entity[closestentity].strzelono == false)
+                                if (abs(changex) < 3 * (3 - tryb) && abs(changey) < 3 * (3 - tryb) && entity[closestentity].team != myplayer.team && entity[closestentity].hp > 0 && entity[closestentity].isSpotted == true && entity[closestentity].shooted == false)
                                 {
                                     for (int i = 0; i < 5; i++)
                                     {
@@ -251,43 +261,34 @@ int main()
                                         ang[1] = myplayer.ang.y;
                                         ang[2] = myplayer.ang.z;
 
-                                        CloseHandle(proces);
-                                        proces = OpenProcess(PROCESS_VM_WRITE | PROCESS_VM_OPERATION, false, pid);
-                                        WriteProcessMemory(proces, (LPVOID)(dwclient + signatures::dwClientState_ViewAngles), ang, sizeof(ang), 0);
-                                        CloseHandle(proces);
-                                        proces = OpenProcess(PROCESS_VM_READ, false, pid);
+                                        CloseHandle(process);
+                                        process = OpenProcess(PROCESS_VM_WRITE | PROCESS_VM_OPERATION, false, pid);
+                                        WriteProcessMemory(process, (LPVOID)(dwclient + signatures::dwClientState_ViewAngles), ang, sizeof(ang), 0);
+                                        CloseHandle(process);
+                                        process = OpenProcess(PROCESS_VM_READ, false, pid);
 
-                                        Sleep(2);
+                                        this_thread::sleep_for(2ms);
                                     }
-                                    entity[closestentity].strzelono = true;
+                                    entity[closestentity].shooted = true;
                                 }
-                                keybd_event(VK_F1, MapVirtualKey(VK_F1, 0), 0, 0);
-                                Sleep(2);
-                                keybd_event(VK_F1, MapVirtualKey(VK_F1, 0), 2, 0);
-                                Sleep(20);
+                                Attack();
                             }
                         }
                         else
                         {
                             if (GetAsyncKeyState(VK_LBUTTON))
                             {
-                                keybd_event(VK_F1, MapVirtualKey(VK_F1, 0), 0, 0);
-                                Sleep(2);
-                                keybd_event(VK_F1, MapVirtualKey(VK_F1, 0), 2, 0);
-                                Sleep(20);
+                                Attack();
                             }
                         }
-                        Sleep(1);
+                        this_thread::sleep_for(1ms);
                     }
                 }
                 else
                 {
                     if (GetAsyncKeyState(VK_LBUTTON))
                     {
-                        keybd_event(VK_F1, MapVirtualKey(VK_F1, 0), 0, 0);
-                        Sleep(2);
-                        keybd_event(VK_F1, MapVirtualKey(VK_F1, 0), 2, 0);
-                        Sleep(20);
+                        Attack();
                     }
                 }
             }
@@ -296,11 +297,11 @@ int main()
         {
             cout << "Nie znaleziono procesu cs:go";
         }
+        CloseHandle(process);
     }
     else
     {
         cout << "Nie znaleziono okna cs:go";
     }
-    CloseHandle(proces);
     return 0;
 }
