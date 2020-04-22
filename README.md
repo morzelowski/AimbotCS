@@ -1,3 +1,3 @@
 # Aimbot
 
-<img src="https://ci.appveyor.com/api/projects/status/bx0u2051l38qx4dj?svg=true" alt="Project Badge" width="300">
+<img src="https://ci.appveyor.com/api/projects/status/62xs0g383shltj0v?svg=true" alt="Project Badge" width="300">
