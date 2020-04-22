@@ -4,10 +4,10 @@
 struct Player
 {
 public:
-    int hp;
-    int team;
-    bool isSpotted;
+    int hp = 0;
+    int team = 0;
+    bool isSpotted = false;
     Point pos;
     Point ang;
-    bool strzelono = false;
+    bool shooted = false;
 };
