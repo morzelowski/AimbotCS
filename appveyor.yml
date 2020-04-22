@@ -5,4 +5,4 @@ build:
   verbosity: minimal
 
 test_script:
-  - vstest.console /logger:Appveyor C:\projects\aimbot\x64\Debug\UnitTest.dll
+  - vstest.console /logger:Appveyor C:\projects\csgo-aimbot\x64\Debug\UnitTest.dll
