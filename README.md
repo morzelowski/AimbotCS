@@ -9,3 +9,4 @@ Usage:<br/>
   -Change attack key to F1<br/>
   -Up-arrow to turn on, Down-arrow to turn off<br/>
   -F2 for AK-47 mode(default), F4 for AWP mode<br/>
+
