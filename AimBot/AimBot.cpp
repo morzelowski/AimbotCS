@@ -12,6 +12,7 @@
 #include "haze.h"
 #include "Point.h"
 #include "Player.h"
+#include "Process.h"
 
 DWORD GetModuleBaseAddress(LPSTR ModuleName, DWORD pid)
 {
@@ -99,8 +100,6 @@ void Attack()
 
 int main()
 {
-    HANDLE process;
-
     SYSTEMTIME st;
     int moment = NULL;
 
@@ -116,8 +115,8 @@ int main()
     if (window != NULL)
     {
         GetWindowThreadProcessId(window, &pid);
-        process = OpenProcess(PROCESS_VM_READ, false, pid);
-        if (process != NULL)
+        Process process(pid);
+        if (process.get() != NULL)
         {
             DWORD clientmodule = GetModuleBaseAddress((LPSTR)"client_panorama.dll", pid);
             DWORD engine = GetModuleBaseAddress((LPSTR)"engine.dll", pid);
@@ -141,13 +140,13 @@ int main()
                     DWORD dwclient;
 
                     DWORD player;
-                    ReadProcessMemory(process, (LPCVOID)(clientmodule + signatures::dwLocalPlayer), (PVOID)&player, sizeof(player), 0);
+                    ReadProcessMemory(process.get(), (LPCVOID)(clientmodule + signatures::dwLocalPlayer), (PVOID)&player, sizeof(player), 0);
 
                     Player myplayer;
-                    ReadProcessMemory(process, (LPCVOID)(engine + signatures::dwClientState), (PVOID)&dwclient, sizeof(dwclient), 0);
+                    ReadProcessMemory(process.get(), (LPCVOID)(engine + signatures::dwClientState), (PVOID)&dwclient, sizeof(dwclient), 0);
 
                     DWORD basebone;
-                    ReadProcessMemory(process, (LPCVOID)(player + netvars::m_dwBoneMatrix), (PVOID)&basebone, sizeof(basebone), 0);
+                    ReadProcessMemory(process.get(), (LPCVOID)(player + netvars::m_dwBoneMatrix), (PVOID)&basebone, sizeof(basebone), 0);
 
                     while (true)
                     {
@@ -179,16 +178,16 @@ int main()
 
                         float pos_add[3];
 
-                        ReadProcessMemory(process, (LPCVOID)(player + netvars::m_iHealth), (LPVOID)&myplayer.hp, sizeof(myplayer.hp), 0);
-                        ReadProcessMemory(process, (LPCVOID)(player + netvars::m_iTeamNum), (PVOID)&myplayer.team, sizeof(myplayer.team), 0);
-                        ReadProcessMemory(process, (LPCVOID)(player + netvars::m_vecOrigin), (PVOID)&myplayer.pos, sizeof(myplayer.pos), 0);
-                        ReadProcessMemory(process, (LPCVOID)(player + netvars::m_vecViewOffset), (PVOID)&pos_add, sizeof(pos_add), 0);
+                        ReadProcessMemory(process.get(), (LPCVOID)(player + netvars::m_iHealth), (LPVOID)&myplayer.hp, sizeof(myplayer.hp), 0);
+                        ReadProcessMemory(process.get(), (LPCVOID)(player + netvars::m_iTeamNum), (PVOID)&myplayer.team, sizeof(myplayer.team), 0);
+                        ReadProcessMemory(process.get(), (LPCVOID)(player + netvars::m_vecOrigin), (PVOID)&myplayer.pos, sizeof(myplayer.pos), 0);
+                        ReadProcessMemory(process.get(), (LPCVOID)(player + netvars::m_vecViewOffset), (PVOID)&pos_add, sizeof(pos_add), 0);
 
                         myplayer.pos.x += pos_add[0];
                         myplayer.pos.y += pos_add[1];
                         myplayer.pos.z += pos_add[2];
 
-                        ReadProcessMemory(process, (LPCVOID)(dwclient + signatures::dwClientState_ViewAngles), (PVOID)&pos_add, sizeof(pos_add), 0);
+                        ReadProcessMemory(process.get(), (LPCVOID)(dwclient + signatures::dwClientState_ViewAngles), (PVOID)&pos_add, sizeof(pos_add), 0);
 
                         myplayer.ang.x = pos_add[0];
                         myplayer.ang.y = pos_add[1];
@@ -199,21 +198,21 @@ int main()
                         for (int i = 1; i < 64; i++)
                         {
                             DWORD ent;
-                            ReadProcessMemory(process, (LPCVOID)(clientmodule + signatures::dwEntityList + (0x10 * i)), (PVOID)&ent, sizeof(ent), 0);
+                            ReadProcessMemory(process.get(), (LPCVOID)(clientmodule + signatures::dwEntityList + (0x10 * i)), (PVOID)&ent, sizeof(ent), 0);
                             if (ent != NULL)
                             {
                                 maxplayer++;
 
-                                ReadProcessMemory(process, (LPCVOID)(ent + netvars::m_iTeamNum), (PVOID)&entity[i].team, sizeof(entity[i].team), 0);
-                                ReadProcessMemory(process, (LPCVOID)(ent + netvars::m_iHealth), (PVOID)&entity[i].hp, sizeof(entity[i].hp), 0);
-                                ReadProcessMemory(process, (LPCVOID)(ent + netvars::m_bSpotted), (PVOID)&entity[i].isSpotted, sizeof(entity[i].isSpotted), 0);
+                                ReadProcessMemory(process.get(), (LPCVOID)(ent + netvars::m_iTeamNum), (PVOID)&entity[i].team, sizeof(entity[i].team), 0);
+                                ReadProcessMemory(process.get(), (LPCVOID)(ent + netvars::m_iHealth), (PVOID)&entity[i].hp, sizeof(entity[i].hp), 0);
+                                ReadProcessMemory(process.get(), (LPCVOID)(ent + netvars::m_bSpotted), (PVOID)&entity[i].isSpotted, sizeof(entity[i].isSpotted), 0);
 
-                                ReadProcessMemory(process, (LPCVOID)(ent + netvars::m_vecOrigin), (PVOID)&entity[i].pos, sizeof(entity[i].pos), 0);
+                                ReadProcessMemory(process.get(), (LPCVOID)(ent + netvars::m_vecOrigin), (PVOID)&entity[i].pos, sizeof(entity[i].pos), 0);
                                 DWORD basebone;
-                                ReadProcessMemory(process, (LPCVOID)(ent + netvars::m_dwBoneMatrix), (PVOID)&basebone, sizeof(basebone), 0);
-                                ReadProcessMemory(process, (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x0C), (PVOID)&entity[i].pos.x, sizeof(entity[i].pos.x), 0);
-                                ReadProcessMemory(process, (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x1C), (PVOID)&entity[i].pos.y, sizeof(entity[i].pos.y), 0);
-                                ReadProcessMemory(process, (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x2C), (PVOID)&entity[i].pos.z, sizeof(entity[i].pos.z), 0);
+                                ReadProcessMemory(process.get(), (LPCVOID)(ent + netvars::m_dwBoneMatrix), (PVOID)&basebone, sizeof(basebone), 0);
+                                ReadProcessMemory(process.get(), (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x0C), (PVOID)&entity[i].pos.x, sizeof(entity[i].pos.x), 0);
+                                ReadProcessMemory(process.get(), (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x1C), (PVOID)&entity[i].pos.y, sizeof(entity[i].pos.y), 0);
+                                ReadProcessMemory(process.get(), (LPCVOID)(basebone + (tryb * 4) * 0x30 + 0x2C), (PVOID)&entity[i].pos.z, sizeof(entity[i].pos.z), 0);
                             }
                         }
 
@@ -261,11 +260,8 @@ int main()
                                         ang[1] = myplayer.ang.y;
                                         ang[2] = myplayer.ang.z;
 
-                                        CloseHandle(process);
-                                        process = OpenProcess(PROCESS_VM_WRITE | PROCESS_VM_OPERATION, false, pid);
-                                        WriteProcessMemory(process, (LPVOID)(dwclient + signatures::dwClientState_ViewAngles), ang, sizeof(ang), 0);
-                                        CloseHandle(process);
-                                        process = OpenProcess(PROCESS_VM_READ, false, pid);
+                                        Process process_write(pid, true);
+                                        WriteProcessMemory(process_write.get(), (LPVOID)(dwclient + signatures::dwClientState_ViewAngles), ang, sizeof(ang), 0);
 
                                         this_thread::sleep_for(2ms);
                                     }
@@ -297,7 +293,6 @@ int main()
         {
             cout << "Nie znaleziono procesu cs:go";
         }
-        CloseHandle(process);
     }
     else
     {
