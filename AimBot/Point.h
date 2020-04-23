@@ -9,3 +9,4 @@ public:
 
     float distance(const Point& p) const;
 };
+
